@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: docx-to-odf
+    runtime: docker
+    plan: free
+    healthCheckPath: /

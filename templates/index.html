@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOCX / PPTX 轉 ODF 批次轉換工具</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 60px;
+      color: #1e293b;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1d4ed8;
+      margin-bottom: 8px;
+    }
+    header p {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 32px;
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 24px;
+    }
+
+    /* Drop Zone */
+    #drop-zone {
+      border: 2.5px dashed #93c5fd;
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      background: #eff6ff;
+      position: relative;
+    }
+    #drop-zone.drag-over {
+      background: #dbeafe;
+      border-color: #3b82f6;
+    }
+    #drop-zone .icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+    #drop-zone h2 {
+      font-size: 1.1rem;
+      color: #1d4ed8;
+      margin-bottom: 6px;
+    }
+    #drop-zone p {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+    #drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* File list */
+    #file-list-section { display: none; }
+    #file-list-section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 12px;
+    }
+    #file-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    #file-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.88rem;
+    }
+    #file-list li .badge {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    #file-list li .name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #file-list li .size {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+    #file-list li .remove-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0 4px;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    #file-list li .remove-btn:hover { color: #ef4444; }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+      background: #1d4ed8;
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: #1e40af; }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
+    .btn-success {
+      background: #16a34a;
+      color: #fff;
+    }
+    .btn-success:hover:not(:disabled) { background: #15803d; }
+
+    /* Progress */
+    #progress-section { display: none; }
+    #progress-section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 10px;
+    }
+    .progress-bar-wrap {
+      background: #e2e8f0;
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+    #progress-label {
+      font-size: 0.83rem;
+      color: #64748b;
+    }
+
+    /* Results */
+    #results-section { display: none; }
+    #results-section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 12px;
+    }
+    #results-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    #results-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+    }
+    #results-list li.success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+    #results-list li.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+    }
+    .result-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .result-info { flex: 1; min-width: 0; }
+    .result-original {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #374151;
+    }
+    .result-sub {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .result-sub.error { color: #ef4444; }
+    .format-badge {
+      background: #d1fae5;
+      color: #065f46;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Summary bar */
+    .summary {
+      display: flex;
+      gap: 16px;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+    }
+    .summary span { color: #64748b; }
+    .summary strong { color: #1e293b; }
+    .summary .ok { color: #16a34a; font-weight: 700; }
+    .summary .fail { color: #dc2626; font-weight: 700; }
+
+    /* Warning banner */
+    #lo-warning {
+      display: none;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: #78350f;
+      line-height: 1.55;
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 20px;
+    }
+    #lo-warning a { color: #b45309; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="icon" style="font-size:2.5rem; margin-bottom:8px;">📄</div>
+    <h1>DOCX / PPTX 轉 ODF</h1>
+    <p>批次將 Microsoft Office 格式轉換為開放文件格式（ODF）</p>
+  </header>
+
+  <!-- LibreOffice 未安裝警告 -->
+  <div id="lo-warning">
+    ⚠️ <strong>未偵測到 LibreOffice。</strong>
+    本工具需要 LibreOffice 才能進行格式轉換。請先
+    <a href="https://www.libreoffice.org/download/download-libreoffice/" target="_blank">下載並安裝 LibreOffice</a>，
+    安裝後重新啟動伺服器即可使用。
+  </div>
+
+  <!-- 主要操作卡片 -->
+  <div class="card">
+    <!-- Drop Zone -->
+    <div id="drop-zone">
+      <input type="file" id="file-input" multiple accept=".docx,.doc,.pptx,.ppt,.xlsx,.xls" />
+      <div class="icon">☁️</div>
+      <h2>拖曳檔案至此，或點擊選擇</h2>
+      <p>支援 .docx &nbsp;.doc &nbsp;.pptx &nbsp;.ppt &nbsp;.xlsx &nbsp;.xls</p>
+    </div>
+
+    <!-- 已選檔案列表 -->
+    <div id="file-list-section" style="margin-top:20px;">
+      <h3 id="file-list-title">已選擇 0 個檔案</h3>
+      <ul id="file-list"></ul>
+      <div class="actions">
+        <button class="btn btn-primary" id="convert-btn">🔄 開始轉換</button>
+        <button class="btn btn-secondary" id="clear-btn">🗑️ 清除全部</button>
+      </div>
+    </div>
+
+    <!-- 進度條 -->
+    <div id="progress-section" style="margin-top:20px;">
+      <h3>轉換中，請稍候…</h3>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div id="progress-label">上傳並轉換中…</div>
+    </div>
+  </div>
+
+  <!-- 結果卡片 -->
+  <div class="card" id="results-section">
+    <h3>轉換結果</h3>
+    <div class="summary" id="summary-bar"></div>
+    <ul id="results-list"></ul>
+    <div class="actions">
+      <button class="btn btn-success" id="download-btn" style="display:none;">
+        ⬇️ 下載轉換後的檔案 (.zip)
+      </button>
+      <button class="btn btn-secondary" id="reset-btn">🔁 重新開始</button>
+    </div>
+  </div>
+
+  <script>
+    let selectedFiles = [];
+    let downloadId = null;
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileListSection = document.getElementById('file-list-section');
+    const fileListEl = document.getElementById('file-list');
+    const fileListTitle = document.getElementById('file-list-title');
+    const convertBtn = document.getElementById('convert-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const progressSection = document.getElementById('progress-section');
+    const progressFill = document.getElementById('progress-fill');
+    const progressLabel = document.getElementById('progress-label');
+    const resultsSection = document.getElementById('results-section');
+    const resultsList = document.getElementById('results-list');
+    const downloadBtn = document.getElementById('download-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const summaryBar = document.getElementById('summary-bar');
+    const loWarning = document.getElementById('lo-warning');
+
+    const EXT_ICON = {
+      docx: '📝', doc: '📝',
+      pptx: '📊', ppt: '📊',
+      xlsx: '📋', xls: '📋'
+    };
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function getExt(name) {
+      return name.split('.').pop().toLowerCase();
+    }
+
+    function renderFileList() {
+      fileListEl.innerHTML = '';
+      selectedFiles.forEach((f, i) => {
+        const ext = getExt(f.name);
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="badge">${ext}</span>
+          <span class="icon" style="font-size:1.1rem">${EXT_ICON[ext] || '📄'}</span>
+          <span class="name" title="${f.name}">${f.name}</span>
+          <span class="size">${formatSize(f.size)}</span>
+          <button class="remove-btn" data-index="${i}" title="移除">✕</button>
+        `;
+        fileListEl.appendChild(li);
+      });
+
+      fileListEl.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedFiles.splice(Number(btn.dataset.index), 1);
+          renderFileList();
+          updateFileListVisibility();
+        });
+      });
+    }
+
+    function updateFileListVisibility() {
+      fileListTitle.textContent = `已選擇 ${selectedFiles.length} 個檔案`;
+      fileListSection.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+    }
+
+    function addFiles(files) {
+      const allowed = ['docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls'];
+      Array.from(files).forEach(f => {
+        const ext = getExt(f.name);
+        if (!allowed.includes(ext)) return;
+        // Avoid duplicates by name+size
+        const exists = selectedFiles.some(x => x.name === f.name && x.size === f.size);
+        if (!exists) selectedFiles.push(f);
+      });
+      renderFileList();
+      updateFileListVisibility();
+    }
+
+    // Drag & drop
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      addFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => {
+      addFiles(fileInput.files);
+      fileInput.value = '';
+    });
+
+    clearBtn.addEventListener('click', () => {
+      selectedFiles = [];
+      renderFileList();
+      updateFileListVisibility();
+    });
+
+    // Convert
+    convertBtn.addEventListener('click', async () => {
+      if (selectedFiles.length === 0) return;
+
+      // Show progress, hide other sections
+      fileListSection.style.display = 'none';
+      progressSection.style.display = 'block';
+      resultsSection.style.display = 'none';
+      convertBtn.disabled = true;
+
+      // Animate progress (fake until response)
+      let fakeProgress = 0;
+      const fakeInterval = setInterval(() => {
+        fakeProgress = Math.min(fakeProgress + 2, 85);
+        progressFill.style.width = fakeProgress + '%';
+        progressLabel.textContent = `正在轉換 ${selectedFiles.length} 個檔案…`;
+      }, 300);
+
+      try {
+        const formData = new FormData();
+        selectedFiles.forEach(f => formData.append('files', f));
+
+        const res = await fetch('/api/convert', {
+          method: 'POST',
+          body: formData
+        });
+
+        clearInterval(fakeInterval);
+        progressFill.style.width = '100%';
+        progressLabel.textContent = '轉換完成！';
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || '伺服器錯誤');
+        }
+
+        const data = await res.json();
+        downloadId = data.download_id;
+
+        setTimeout(() => {
+          progressSection.style.display = 'none';
+          showResults(data.results);
+        }, 600);
+
+      } catch (err) {
+        clearInterval(fakeInterval);
+        progressSection.style.display = 'none';
+        fileListSection.style.display = 'block';
+        convertBtn.disabled = false;
+        alert('轉換失敗：' + err.message);
+      }
+    });
+
+    function showResults(results) {
+      resultsList.innerHTML = '';
+      let successCount = 0;
+      let errorCount = 0;
+
+      results.forEach(r => {
+        const li = document.createElement('li');
+        if (r.status === 'success') {
+          successCount++;
+          li.className = 'success';
+          li.innerHTML = `
+            <span class="result-icon">✅</span>
+            <div class="result-info">
+              <div class="result-original">${r.original}</div>
+              <div class="result-sub">→ ${r.converted}</div>
+            </div>
+            <span class="format-badge">${r.format}</span>
+          `;
+        } else {
+          errorCount++;
+          li.className = 'error';
+          li.innerHTML = `
+            <span class="result-icon">❌</span>
+            <div class="result-info">
+              <div class="result-original">${r.original}</div>
+              <div class="result-sub error">${r.message || '轉換失敗'}</div>
+            </div>
+          `;
+        }
+        resultsList.appendChild(li);
+      });
+
+      summaryBar.innerHTML = `
+        <span>共 <strong>${results.length}</strong> 個檔案 &nbsp;|&nbsp; 
+        成功：<span class="ok">${successCount}</span> &nbsp;
+        失敗：<span class="fail">${errorCount}</span></span>
+      `;
+
+      if (downloadId && successCount > 0) {
+        downloadBtn.style.display = 'inline-flex';
+        downloadBtn.onclick = () => {
+          window.location.href = `/api/download/${downloadId}`;
+        };
+      } else {
+        downloadBtn.style.display = 'none';
+      }
+
+      resultsSection.style.display = 'block';
+    }
+
+    resetBtn.addEventListener('click', () => {
+      selectedFiles = [];
+      downloadId = null;
+      renderFileList();
+      fileListSection.style.display = 'none';
+      progressSection.style.display = 'none';
+      resultsSection.style.display = 'none';
+      progressFill.style.width = '0%';
+      convertBtn.disabled = false;
+    });
+
+    // Check LibreOffice on load
+    fetch('/api/check-libreoffice')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.available) {
+          loWarning.style.display = 'block';
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>
