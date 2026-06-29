@@ -11,14 +11,18 @@ app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB limit
 
 ALLOWED_EXTENSIONS = {'docx', 'pptx', 'xlsx', 'doc', 'ppt', 'xls'}
 
-# LibreOffice executable path - search common Windows install locations too
+# LibreOffice executable path - search PATH and common install locations
 def _find_libreoffice():
     # Check PATH first
     found = shutil.which('libreoffice') or shutil.which('soffice')
     if found:
         return found
-    # Common Windows install paths
+    # Common install paths (Linux / Windows)
     candidates = [
+        '/usr/bin/libreoffice',           # Linux (Debian/Ubuntu)
+        '/usr/bin/soffice',
+        '/usr/lib/libreoffice/program/soffice',
+        '/opt/libreoffice/program/soffice',
         r'C:\Program Files\LibreOffice\program\soffice.exe',
         r'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
     ]
