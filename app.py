@@ -204,7 +204,6 @@ def download_file(filename):
 def debug():
     import glob
     lo_path = _find_libreoffice()
-    # Search for any soffice/libreoffice binary on the system
     search_results = []
     for pattern in ['/usr/bin/libre*', '/usr/bin/soffice*', '/usr/lib/libreoffice*', '/opt/libre*']:
         search_results.extend(glob.glob(pattern))
@@ -213,12 +212,10 @@ def debug():
         'which_libreoffice': shutil.which('libreoffice'),
         'which_soffice': shutil.which('soffice'),
         'search_results': search_results,
-        'PATH': os.environ.get('PATH', ''),
-        'HOME': os.environ.get('HOME', ''),
     })
 
 
-
+@app.route('/api/check-libreoffice')
 def check_libreoffice():
     lo_path = _find_libreoffice()
     if lo_path:
